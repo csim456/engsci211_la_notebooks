@@ -11,12 +11,12 @@ from IPython.display import display
 # 
 
 #  funtions for fourier approximation
-def f1(x):
+def f1(x,xMin,xMax):
     ''' f1(x) = x
     ''' 
     return x
 
-def f2(x):
+def f2(x,xMin,xMax):
     ''' Square wave 
                ~ -1, -1 < x < 0
         f2(x)= |
@@ -24,13 +24,74 @@ def f2(x):
     '''
     return signal.square(2*x)
 
-def f3(x):
+def f3(x,xMin,xMax):
     ''' Cubic
     '''
     
     return 5*x*(x+1.)*(x-1.)
 
-def produceFourierSeries(x, nMax, x0, x1, f):
+def example_4b(x,xMin,xMax):
+    T = np.abs(xMax-xMin)
+    f = np.zeros(len(x))
+    for i in range(len(x)):
+        xc = x[i]-np.rint(x[i]/T)*T
+        if xc < -0.5*np.pi or xc > 0.5*np.pi:
+            f[i] = -1.
+        else:
+            f[i] = 1.
+    return f
+
+def example_4c(x,xMin,xMax):
+    T = np.abs(xMax-xMin)
+    f = np.zeros(len(x))
+    for i in range(len(x)):
+        f[i] = x[i]-np.rint(x[i]/T)*T
+    return f
+
+
+def example_5a_sine(x,xMin,xMax):
+    T = np.abs(xMax-xMin)
+    f = np.zeros(len(x))
+    for i in range(len(x)):
+        xc = x[i]-np.rint(x[i]/T)*T
+        f[i] = xc
+    return f
+
+def example_5a_cosine(x,xMin,xMax):
+    T = np.abs(xMax-xMin)
+    f = np.zeros(len(x))
+    for i in range(len(x)):
+        xc = x[i]-np.rint(x[i]/T)*T
+        if xc < 0.:
+            f[i] = -1.*xc
+        else:
+            f[i] = 1.*xc
+    return f
+
+def example_5b_sine(x,xMin,xMax):
+    T = np.abs(xMax-xMin)
+    f = np.zeros(len(x))
+    for i in range(len(x)):
+        xc = x[i]-np.rint(x[i]/T)*T
+        if xc < 0.:
+            f[i] = -1.
+        else:
+            f[i] = 1.
+    return f
+
+def example_5b_cosine(x,xMin,xMax):
+    T = np.abs(xMax-xMin)
+    f = np.zeros(len(x))
+    for i in range(len(x)):
+        xc = x[i]-np.rint(x[i]/T)*T
+        if xc < 1. and xc > -1.:
+            f[i] = 1.
+        else:
+            f[i] = 0.
+    return f
+
+
+def produceFourierSeries(x, nMax, xMin, xMax, f):
     """ Produces Fourier Series approximation of a function
     
         ----------
@@ -45,28 +106,32 @@ def produceFourierSeries(x, nMax, x0, x1, f):
         nMax: int
             number of terms
 
-        x0: float
+        xMin: float
             lower bound on window/approximation
 
-        x1: float
+        xMax: float
             upper bound on window/approximation
 
         f: function
             function to be approximated
 
     """
-    T = x1 - x0
+    T = xMax - xMin
 
     # need new range over the actual range of the approximation (not the plotting range)
     # so integration is correct
-    xFuncPeriod = np.arange(x0, x1, 0.001)
+    xFuncPeriod = np.arange(xMin, xMax, 0.001)
 
+    # set initial state of series to be the a0 constant
     series = np.zeros(len(x))
+    series += (1./T)*np.trapz(f(xFuncPeriod,xMin,xMax), x=xFuncPeriod)
+
     prev = None
 
-    for n in range(nMax):
-        an = (2/T)*np.trapz(f(xFuncPeriod)*np.cos(2*n*np.pi*xFuncPeriod*(1/T)), x=xFuncPeriod)
-        bn = (2/T)*np.trapz(f(xFuncPeriod)*np.sin(2*n*np.pi*xFuncPeriod*(1/T)), x=xFuncPeriod)
+    for i in range(nMax):
+        n = i+1 # set n term number based on loop counter
+        an = (2./T)*np.trapz(f(xFuncPeriod,xMin,xMax)*np.cos(2*n*np.pi*xFuncPeriod*(1/T)), x=xFuncPeriod)
+        bn = (2./T)*np.trapz(f(xFuncPeriod,xMin,xMax)*np.sin(2*n*np.pi*xFuncPeriod*(1/T)), x=xFuncPeriod)
 
         prev = np.add(an * np.cos(2*n*np.pi*x*(1/T)), bn * np.sin(2*n*np.pi*x*(1/T)))
         series = np.add(series, prev)
@@ -94,35 +159,54 @@ def fourierMain(function, nMax, showPrevTerm):
     """
 
     # window upper and lower
-    xMin = -np.pi
-    xMax = np.pi
+#     xMin = -np.pi
+#     xMax = np.pi
 
+    functions = {'Linear':[f1, -np.pi, np.pi],'Square Wave':[f2, -np.pi/2, np.pi/2],'Cubic':[f3, -np.pi, np.pi],\
+                '4B':[example_4b,-np.pi,np.pi],'4C':[example_4c,-np.pi,np.pi],\
+                '5A_Sine':[example_5a_sine,-1.,1.],'5A_Cosine':[example_5a_cosine,-1.,1.],
+                '5B_Sine':[example_5b_sine,-1.,1.],'5B_Cosine':[example_5b_cosine,-2.,2.]}
+ 
+    f, xMin, xMax = functions[function]
     x = np.arange(xMin, xMax, 0.001)
-
-    functions = {'Linear':[f1, -np.pi, np.pi],'Square Wave':[f2, -np.pi/2, np.pi/2],'Cubic':[f3, -np.pi, np.pi]}
-    f, x0, x1 = functions[function]
+    fx = f(x,xMin,xMax)
+    fMin = np.min(fx)
+    fMax = np.max(fx)
 
     _, ax = plt.subplots(figsize=(16,10))
 
-    seriesApprox, prev = produceFourierSeries(x, nMax, x0, x1, f)
+    seriesApprox, prev = produceFourierSeries(x, nMax, xMin, xMax, f)
 
-    ax.plot(x, seriesApprox, label='Fourier, {} terms'.format(nMax), color='C0')
+    if nMax > 0:
+        label_tmp = 'Partial Sums, N={}'
+    else:
+        label_tmp = 'a0'
+    
+    ax.plot(x, seriesApprox, label=label_tmp.format(nMax), color='C0')
     # plot prev term if necessary. Don't plot if no prev term. (Shouldnt be possible with slider lim anyway)
-    if (nMax > 1) and showPrevTerm: ax.plot(x, prev, label='Latest Term', color='g')
+    if (nMax > 0) and showPrevTerm: ax.plot(x, prev, label='Latest Term', color='g')
+    ax.plot(x, fx, label='Function over Fundamental Range', color='C1')
 
-    ax.plot(x, f(x), label='Actual', color='C1')
-
-    ax.set_xlim(-np.pi,np.pi)
-    ax.set_ylim(-4,4)
+    xbuffer = np.abs(xMax-xMin)/5.
+    ybuffer = np.abs(fMax-fMin)/5.
+    
+    ax.set_xlabel('x')
+    ax.set_ylabel('f(x)')
+    ax.set_xlim(xMin-xbuffer,xMax+xbuffer)
+    ax.set_ylim(fMin-ybuffer,fMax+ybuffer)
+    ax.axhline(0,ls='-',c='k',lw=0.5)
+    ax.axvline(0,ls='-',c='k',lw=0.5)
     ax.legend()
     plt.show()
+    
 
 def FourierSeries():
     """ 
         Main function called by notebook
     """
-    terms_sldr = widgets.IntSlider(value=3, description='Terms', min=2, max=100, display=False, continuous_update=False)
-    func_drp = widgets.Dropdown(options=['Linear','Square Wave','Cubic'],description='Function')
+    terms_sldr = widgets.IntSlider(value=0, description='Terms', min=0, max=100, display=False, continuous_update=False)
+    func_drp = widgets.Dropdown(options=['Linear','Square Wave','Cubic','4B','4C','5A_Sine','5A_Cosine'\
+                                        ,'5B_Sine','5B_Cosine'],description='Function')
     prevTerm_check = widgets.Checkbox(value=False, description='Show most recent term')
     return widgets.VBox([widgets.HBox([terms_sldr, func_drp, prevTerm_check]), widgets.interactive_output(fourierMain, {'function':func_drp, 'nMax':terms_sldr, 'showPrevTerm':prevTerm_check})])
 
